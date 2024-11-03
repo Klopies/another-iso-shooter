@@ -5,7 +5,7 @@ init();
 const canvas = document.getElementById("screen");
 
 canvas.height = window.innerHeight;
-canvas.width = window.innerWidth;
+canvas.width = window.innerHeight;
 
 const ctx = canvas.getContext("2d");
 
@@ -59,17 +59,17 @@ class Circle {
     this.x += this.vx / canvas.width;
     this.y += this.vy / canvas.height;
 
-    const xCollision = this.collidesWithEdgeX()
+    const xCollision = this.collidesWithEdgeX();
 
     if (xCollision.collidesOuterEdge) {
       if (this.vx > 0) {
-        this.vx *= -1
+        this.vx *= -1;
       }
     }
 
     if (xCollision.collidesInnerEdge) {
       if (this.vx < 0) {
-        this.vx *= -1
+        this.vx *= -1;
       }
     }
 
@@ -77,7 +77,7 @@ class Circle {
 
     if (yCollision.collidesOuterEdge) {
       if (this.vy > 0) {
-        this.vy *= -1
+        this.vy *= -1;
       }
     }
 
@@ -139,13 +139,13 @@ class Circle {
 }
 
 window.addEventListener("resize", () => {
-  canvas.height = window.innerHeight;
-  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight
+  canvas.width = window.innerHeight
   drawCircles();
 });
 
-for (const circleId of 100) {
-  const radius = Math.random() * 20 + 20;
+for (const circleId of 25) {
+  const radius = Math.random() * 20 + 30;
   let xPosition = Math.random();
   let yPosition = Math.random();
   let circle = new Circle(xPosition, yPosition, radius);
@@ -156,8 +156,8 @@ for (const circleId of 100) {
     circle = new Circle(xPosition, yPosition, radius);
   }
 
-  circle.vx = Math.random() + 2 * (Math.random() < 0.5 ? 1 : -1);
-  circle.vy = Math.random() + 2 * (Math.random() < 0.5 ? 1 : -1);
+  circle.vx = Math.random() + 4 * (Math.random() < 0.5 ? 1 : -1);
+  circle.vy = Math.random() + 4 * (Math.random() < 0.5 ? 1 : -1);
 
   circles.push(circle);
   drawCircles();
