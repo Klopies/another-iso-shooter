@@ -1,170 +1,89 @@
 import { init } from "./dirty.js";
+import { Circle } from "./game/objects/Circle.js";
 init();
 
-/** @type {HTMLCanvasElement} */
-const canvas = document.getElementById("screen");
+class Game {
+  constructor({ ticksPerSecond = 500 }) {
+    /** @type {HTMLCanvasElement} */
+    this.canvas = document.getElementById("canvas");
+    this.ctx = this.canvas.getContext("2d");
+    this.canvas.height = window.innerHeight;
+    this.canvas.width = window.innerHeight;
+    this.framesPerSecond = 60;
+    this.ticksPerSecond = ticksPerSecond;
+    /** @type {Array<Circle>} */
+    this.circles = [];
+    this.createCircles();
+    this.drawCircles();
+  }
 
-canvas.height = window.innerHeight;
-canvas.width = window.innerHeight;
+  createCircles() {
+    for (const circleId of 50) {
+      const radius = Math.random() * 20 + 30;
+      let xPosition = Math.random();
+      let yPosition = Math.random();
+      let circle = new Circle(xPosition, yPosition, radius);
+      
+      /** probably not the best collision detection @todo: improve this */
+      while (circle.collidesWithAnyCircle(this.circles)) {
+        yPosition = Math.random();
+        xPosition = Math.random();
+        circle = new Circle(xPosition, yPosition, radius);
+      }
+      circle.vx = (2 + Math.random() / 5) * (Math.random() < 0.5 ? 1 : -1);
+      circle.vy = 2 + (Math.random() / 5) * (Math.random() < 0.5 ? 1 : -1);
 
-const ctx = canvas.getContext("2d");
+      this.circles.push(circle);
+    }
+  }
 
-let circles = [];
+  drawCircles() {
+    for (const circle of this.circles) {
+      circle.draw(this.ctx);
+    }
+  }
+  /**
+   * we do game state updates here
+   */
+  update() {
+    for (const circle of this.circles) {
+      circle.move();
+      const collidingCircles = circle.collidesWithCircles(this.circles);
+      for (const collidingCircle of collidingCircles) {
+        circle.bounceOffCircle(collidingCircle);
+      }
+    }
+  }
 
-function drawCircles() {
-  for (const circle of circles) {
-    circle.draw(ctx);
+  /**
+   * draws the game state to the canvas
+   */
+  render() {
+    this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+    this.drawCircles();
+  }
+
+  /**
+   * browser api wrapper for calling our render function whenever the browser wants to
+   * draw an animation frame, this generally matches the display refresh rate of the device
+   */
+  animate() {
+    this.render();
+    requestAnimationFrame(this.animate.bind(this));
+  }
+
+  startLoop() {
+    setInterval(() => {
+      this.update();
+    }, 1000 / this.ticksPerSecond);
+    this.animate();
   }
 }
 
-class Circle {
-  /**
-   *
-   * @param {number} x
-   * @param {number} y
-   * @param {number} radius
-   * @param {number} vx
-   * @param {number} vy
-   *
-   */
-  constructor(x, y, radius, vx = 0, vy = 0) {
-    this.x = x;
-    this.y = y;
-    this.vx = vx;
-    this.vy = vy;
-    this.radius = radius;
-  }
+window.addEventListener("load", () => {
+  const game = new Game({
+    ticksPerSecond: 100,
+  });
 
-  /**
-   * @param {CanvasRenderingContext2D} context
-   */
-  draw(context) {
-    context.beginPath();
-    context.strokeStyle = "black";
-    context.lineWidth = 2;
-    context.arc(
-      this.x * canvas.width,
-      this.y * canvas.height,
-      this.radius,
-      0,
-      Math.PI * 2,
-      false
-    );
-    context.stroke();
-    context.fill();
-    context.closePath();
-  }
-
-  move() {
-    this.x += this.vx / canvas.width;
-    this.y += this.vy / canvas.height;
-
-    const xCollision = this.collidesWithEdgeX();
-
-    if (xCollision.collidesOuterEdge) {
-      if (this.vx > 0) {
-        this.vx *= -1;
-      }
-    }
-
-    if (xCollision.collidesInnerEdge) {
-      if (this.vx < 0) {
-        this.vx *= -1;
-      }
-    }
-
-    const yCollision = this.collidesWithEdgeY();
-
-    if (yCollision.collidesOuterEdge) {
-      if (this.vy > 0) {
-        this.vy *= -1;
-      }
-    }
-
-    if (yCollision.collidesInnerEdge) {
-      if (this.vy < 0) {
-        this.vy *= -1;
-      }
-    }
-
-    this.draw(ctx);
-  }
-
-  collidesWithEdgeX() {
-    const collidesOuterEdge =
-      canvas.width - (this.x * canvas.width + this.radius) <= 0;
-    const collidesInnerEdge = this.x * canvas.width - this.radius <= 0;
-
-    return {
-      collides: collidesInnerEdge || collidesOuterEdge,
-      collidesInnerEdge,
-      collidesOuterEdge,
-    };
-  }
-
-  collidesWithEdgeY() {
-    const collidesOuterEdge =
-      canvas.height - (this.y * canvas.height + this.radius) <= 0;
-    const collidesInnerEdge = this.y * canvas.height - this.radius <= 0;
-
-    return {
-      collides: collidesInnerEdge || collidesOuterEdge,
-      collidesInnerEdge,
-      collidesOuterEdge,
-    };
-  }
-
-  /**
-   * @param {Circle} circle
-   */
-  collidesWith(circle) {
-    const distX = (circle.x - this.x) * canvas.width;
-    const distY = (circle.y - this.y) * canvas.height;
-    const distance = Math.sqrt(distX ** 2 + distY ** 2);
-
-    return distance <= circle.radius + this.radius;
-  }
-
-  /**
-   * @param {Array<Circle>} circles
-   */
-  collidesWithAnyCircle(circles) {
-    for (const circle of circles) {
-      if (circle.collidesWith(this)) {
-        return true;
-      }
-    }
-    return false;
-  }
-}
-
-window.addEventListener("resize", () => {
-  canvas.height = window.innerHeight
-  canvas.width = window.innerHeight
-  drawCircles();
+  game.startLoop();
 });
-
-for (const circleId of 25) {
-  const radius = Math.random() * 20 + 30;
-  let xPosition = Math.random();
-  let yPosition = Math.random();
-  let circle = new Circle(xPosition, yPosition, radius);
-
-  while (circle.collidesWithAnyCircle(circles)) {
-    yPosition = Math.random();
-    xPosition = Math.random();
-    circle = new Circle(xPosition, yPosition, radius);
-  }
-
-  circle.vx = Math.random() + 4 * (Math.random() < 0.5 ? 1 : -1);
-  circle.vy = Math.random() + 4 * (Math.random() < 0.5 ? 1 : -1);
-
-  circles.push(circle);
-  drawCircles();
-}
-setInterval(() => {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  for (const circle of circles) {
-    circle.move();
-  }
-}, 10);
